@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Painel do Admin</title>
+<link rel="stylesheet" href="style.css">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+
+<h1>👨‍💼 Painel do Admin</h1>
+<div id="lista"></div>
+
+<script>
+const firebaseConfig = {
+  apiKey:"SUA_API_KEY",
+  authDomain:"SEU_PROJETO.firebaseapp.com",
+  projectId:"SEU_PROJETO",
+  storageBucket:"SEU_PROJETO.appspot.com",
+  messagingSenderId:"SEU_MESSAGING_ID",
+  appId:"SEU_APP_ID"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore();
+const auth=firebase.auth();
+
+async function carregarUsuarios(){
+  const lista=document.getElementById("lista");
+  lista.innerHTML="";
+  const snapshot=await db.collection('users').get();
+  snapshot.forEach(doc=>{
+    const u=doc.data();
+    const uid=doc.id;
+    if(u.tipo!=="admin"){
+      const status=u.aprovado?"✅ Aprovado":"⏳ Pendente";
+      lista.innerHTML+=`
+        <div class="card">
+          <h3>${u.nome}</h3>
+          <p><b>CPF:</b> ${u.cpf}</p>
+          <p>${status}</p>
+          <img src="${u.selfieURL}" alt="Selfie">
+          <button onclick="aprovar('${uid}')">Aprovar</button>
+          <button onclick="reprovar('${uid}')">Reprovar</button>
+        </div>
+      `;
+    }
+  });
+}
+async function aprovar(uid){await db.collection('users').doc(uid).update({aprovado:true});carregarUsuarios();}
+async function reprovar(uid){await db.collection('users').doc(uid).delete();carregarUsuarios();}
+auth.onAuthStateChanged(user=>{if(!user){alert("Faça login como admin!");window.location.href="index.html";}else{carregarUsuarios();}});
+</script>
+
+</body>
+</html>

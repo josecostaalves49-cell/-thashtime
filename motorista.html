@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Painel do Coletor</title>
+<link rel="stylesheet" href="style.css">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+
+<h1>🗑️ Painel do Coletor</h1>
+<div id="dadosUsuario" class="card"></div>
+
+<h2>Agendar Coleta</h2>
+<input type="date" id="dataColeta">
+<input type="time" id="horaColeta">
+<button onclick="adicionarColeta()">Adicionar Coleta</button>
+
+<h3>Minhas Coletas</h3>
+<div id="listaColetas"></div>
+
+<button onclick="logout()" style="background:#e74c3c;">Logout</button>
+
+<script>
+const firebaseConfig = {
+  apiKey:"SUA_API_KEY",
+  authDomain:"SEU_PROJETO.firebaseapp.com",
+  projectId:"SEU_PROJETO",
+  storageBucket:"SEU_PROJETO.appspot.com",
+  messagingSenderId:"SEU_MESSAGING_ID",
+  appId:"SEU_APP_ID"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore();
+const auth=firebase.auth();
+
+let uidGlobal;
+let userDataGlobal;
+
+auth.onAuthStateChanged(async user=>{
+  if(!user){alert("Faça login!");window.location.href="index.html";}
+  else{
+    uidGlobal=user.uid;
+    const doc=await db.collection('users').doc(uidGlobal).get();
+    userDataGlobal=doc.data();
+    if(userDataGlobal.tipo!=="coletor"){alert("Acesso negado!");window.location.href="index.html";}
+    else{mostrarDados();listarColetas();}
+  }
+});
+
+function mostrarDados(){
+  const div=document.getElementById("dadosUsuario");
+  div.innerHTML=`<h3>${userDataGlobal.nome}</h3>
+    <p><b>CPF:</b> ${userDataGlobal.cpf}</p>
+    <img src="${userDataGlobal.selfieURL}" alt="Selfie">`;
+}
+
+async function adicionarColeta(){
+  const data=document.getElementById("dataColeta").value;
+  const hora=document.getElementById("horaColeta").value;
+  if(!data||!hora) return alert("Preencha data e hora!");
+  await db.collection('users').doc(uidGlobal).update({
+    coletas: firebase.firestore.FieldValue.arrayUnion({data,hora,concluida:false})
+  });
+  const doc=await db.collection('users').doc(uidGlobal).get();
+  userDataGlobal=doc.data();
+  listarColetas();
+}
+
+function listarColetas(){
+  const div=document.getElementById("listaColetas");
+  div.innerHTML="";
+  if(!userDataGlobal.coletas) return;
+  userDataGlobal.coletas.forEach((c,i)=>{
+    const status=c.concluida?"✅ Concluída":"⏳ Pendente";
+    div.innerHTML+=`<div class="card">
+      <p><b>Data:</b> ${c.data}</p>
+      <p><b>Hora:</b> ${c.hora}</p>
+      <p>${status}</p>
+      ${!c.concluida?`<button onclick="concluirColeta(${i})">Marcar Concluída</button>`:""}
+    </div>`;
+  });
+}
+
+async function concluirColeta(index){
+  const coletas=[...userDataGlobal.coletas];
+  coletas[index].concluida=true;
+  await db.collection('users').doc(uidGlobal).update({coletas});
+  const doc=await db.collection('users').doc(uidGlobal).get();
+  userDataGlobal=doc.data();
+  listarColetas();
+}
+
+function logout(){auth.signOut();window.location.href="index.html";}
+</script>
+
+</body>
+</html>

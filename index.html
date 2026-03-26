@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Cadastro Coletor</title>
+<link rel="stylesheet" href="style.css">
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+<script>
+ const firebaseConfig = {
+  apiKey: "AIzaSyBKavFXZBPtaBy-CnXnQMlCj9FPmeXPEVM",
+  authDomain: "trashtimesystem.firebaseapp.com",
+  projectId: "trashtimesystem",
+  storageBucket: "trashtimesystem.appspot.com", 
+  messagingSenderId: "551159971792",
+  appId: "1:551159971792:web:9d3d6149f13a78aac343d5"
+};
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+  const storage = firebase.storage();
+</script>
+</head>
+<body>
+
+<h1>🚛 Cadastro de Coletor</h1>
+
+<input type="text" id="nome" placeholder="Nome completo">
+<input type="text" id="cpf" placeholder="CPF">
+<input type="email" id="email" placeholder="Email">
+<input type="password" id="senha" placeholder="Senha">
+
+<input type="hidden" id="tipo" value="coletor">
+
+<hr>
+
+<h3>🤳 Selfie</h3>
+<video id="videoSelfie" autoplay playsinline width="250"></video>
+<br>
+<button onclick="capturar()">Capturar Selfie</button>
+<br>
+<img id="imgSelfie" width="250" alt="Selfie">
+
+<br><br>
+<button onclick="cadastrar()">Cadastrar</button>
+
+<hr>
+
+<h2>Login</h2>
+<input type="email" id="loginEmail" placeholder="Email">
+<input type="password" id="loginSenha" placeholder="Senha">
+<button onclick="login()">Entrar</button>
+
+<script>
+async function iniciarCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+    document.getElementById("videoSelfie").srcObject = stream;
+  } catch (erro) {
+    alert("Erro ao acessar câmera: " + erro);
+  }
+}
+function capturar() {
+  const video = document.getElementById("videoSelfie");
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+  document.getElementById("imgSelfie").src = canvas.toDataURL("image/png");
+}
+async function cadastrar() {
+  const nome = document.getElementById("nome").value;
+  const cpf = document.getElementById("cpf").value;
+  const email = document.getElementById("email").value;
+  const senha = document.getElementById("senha").value;
+  const selfieDataURL = document.getElementById("imgSelfie").src;
+  const tipo = document.getElementById("tipo").value;
+  if(!nome||!cpf||!email||!senha||!selfieDataURL) return alert("Preencha todos os campos e tire a selfie!");
+  try {
+    const userCredential = await auth.createUserWithEmailAndPassword(email, senha);
+    const uid = userCredential.user.uid;
+    const selfieRef = storage.ref().child(`selfies/${uid}.png`);
+    await selfieRef.putString(selfieDataURL,'data_url');
+    const selfieURL = await selfieRef.getDownloadURL();
+    await db.collection('users').doc(uid).set({
+      nome, cpf, email, tipo, aprovado:false, selfieURL, coletas:[]
+    });
+    alert("Cadastro enviado para aprovação pelo admin!");
+  } catch(e){ alert("Erro ao cadastrar: "+e.message);}
+}
+async function login() {
+  const email = document.getElementById("loginEmail").value;
+  const senha = document.getElementById("loginSenha").value;
+
+  try {
+    const userCredential = await auth.signInWithEmailAndPassword(email, senha);
+    const uid = userCredential.user.uid;
+
+    console.log("UID logado:", uid); // 👈 IMPORTANTE
+
+    const userDoc = await db.collection('users').doc(uid).get();
+
+    if (!userDoc.exists) {
+      return alert("Usuário não encontrado no banco!");
+    }
+
+    const userData = userDoc.data();
+
+    console.log("Dados do usuário:", userData); // 👈 IMPORTANTE
+
+    if (!userData.aprovado) {
+      return alert("Aguardando aprovação do admin!");
+    }
+
+    if (userData.tipo === "admin") {
+      window.location.href = "admin.html";
+    } else if (userData.tipo === "coletor") {
+      window.location.href = "motorista.html";
+    } else {
+      alert("Tipo de usuário inválido!");
+    }
+
+  } catch (e) {
+    alert("Erro ao logar: " + e.message);
+  }
+}
+window.addEventListener("load", iniciarCamera);
+</script>
+
+</body>
+</html>

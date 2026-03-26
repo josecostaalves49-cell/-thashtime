@@ -1,0 +1,10 @@
+body{font-family:Arial,sans-serif;background:#f4f4f4;text-align:center;margin:0;padding:0;}
+h1,h2,h3{color:#333;}
+input,button{margin:5px;padding:10px;border-radius:8px;border:1px solid #ccc;}
+button{cursor:pointer;background:#3498db;color:#fff;border:none;}
+button:hover{opacity:0.9;}
+.card{background:#fff;margin:15px auto;padding:15px;width:300px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.2);}
+img{width:100%;border-radius:8px;}
+button[onclick*="logout"]{background:#e74c3c;}
+button[onclick*="aprovar"]{background:green;color:#fff;}
+button[onclick*="reprovar"]{background:red;color:#fff;}
